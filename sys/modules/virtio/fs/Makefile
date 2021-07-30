@@ -23,6 +23,11 @@
 # SUCH DAMAGE.
 #
 
-SUBDIR=	virtio pci network block balloon scsi random console fs
+.PATH: ${SRCTOP}/sys/dev/virtio/fs
 
-.include <bsd.subdir.mk>
+KMOD=	virtio_fs
+SRCS=	virtio_fs.c
+SRCS+=	virtio_bus_if.h virtio_if.h
+SRCS+=	bus_if.h device_if.h
+
+.include <bsd.kmod.mk>
