@@ -33,7 +33,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
-#include <sys/module.h>
+// #include <sys/module.h>
 
 #include <machine/bus.h>
 #include <machine/resource.h>
@@ -49,7 +49,7 @@ struct vtfs_softc {
 	struct virtqueue	*vtfs_hipriovq;
 };
 
-static int	vtfs_modevent(module_t, int, void *);
+// static int	vtfs_modevent(module_t, int, void *);
 
 static int	vtfs_probe(device_t);
 static int	vtfs_attach(device_t);
@@ -80,50 +80,55 @@ static driver_t vtfs_driver = {
 };
 static devclass_t vtfs_devclass;
 
-VIRTIO_DRIVER_MODULE(virtio_fs, vtfs_driver, vtfs_devclass, vtfs_modevent, 0);
-MODULE_VERSION(virtio_fs, 1);
-MODULE_DEPEND(virtio_fs, virtio, 1, 1, 1);
-// MODULE_DEPEND(virtio_fs, random_device, 1, 1, 1);
+// VIRTIO_DRIVER_MODULE(virtio_fs, vtfs_driver, vtfs_devclass, vtfs_modevent, 0);
+// MODULE_VERSION(virtio_fs, 1);
+// MODULE_DEPEND(virtio_fs, virtio, 1, 1, 1);
 
-VIRTIO_SIMPLE_PNPINFO(virtio_fs, VIRTIO_ID_FS, "VirtIO Filesystem Adapter");
+// VIRTIO_SIMPLE_PNPINFO(virtio_fs, VIRTIO_ID_FS, "VirtIO Filesystem Adapter");
+
+// static int
+// vtfs_modevent(module_t mod, int type, void *unused)
+// {
+// 	int error;
+
+// 	switch (type) {
+// 	case MOD_LOAD:
+// 	case MOD_QUIESCE:
+// 	case MOD_UNLOAD:
+// 	case MOD_SHUTDOWN:
+// 		error = 0;
+// 		break;
+// 	default:
+// 		error = EOPNOTSUPP;
+// 		break;
+// 	}
+
+// 	return (error);
+// }
 
 static int
-vtfs_modevent(module_t mod, int type, void *unused)
+vtrnd_probe(device_t dev)
 {
-	int error;
 
-	switch (type) {
-	case MOD_LOAD:
-	case MOD_QUIESCE:
-	case MOD_UNLOAD:
-	case MOD_SHUTDOWN:
-		error = 0;
-		break;
-	default:
-		error = EOPNOTSUPP;
-		break;
-	}
+	if (virtio_get_device_type(dev) != VIRTIO_ID_ENTROPY)
+		return (ENXIO);
 
-	return (error);
-}
+	device_set_desc(dev, "VirtIO Entropy Adapter");
 
-static int
-vtfs_probe(device_t dev)
-{
-	return (VIRTIO_SIMPLE_PROBE(dev, virtio_fs));
+	return (BUS_PROBE_DEFAULT);
 }
 
 static int
 vtfs_attach(device_t dev)
 {
-	struct vtfs_softc *sc, *exp;
+	struct vtfs_softc *sc;
 	int error;
 
 	sc = device_get_softc(dev);
 	sc->vtfs_dev = dev;
 	virtio_set_feature_desc(dev, vtfs_feature_desc);
 
-	error = vtfs_setup_features(sc);
+	error = vtfs_negotiate_features(sc);
 	if (error) {
 		device_printf(dev, "cannot setup features\n");
 		goto fail;
