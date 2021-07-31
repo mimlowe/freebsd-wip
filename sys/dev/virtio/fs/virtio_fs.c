@@ -56,7 +56,6 @@ static int	vtfs_attach(device_t);
 static int	vtfs_detach(device_t);
 
 static int	vtfs_negotiate_features(struct vtfs_softc *);
-static int	vtfs_setup_features(struct vtfs_softc *);
 static int	vtfs_alloc_hiprio_virtqueue(struct vtfs_softc *);
 static int	vtfs_alloc_req_virtqueue(struct vtfs_softc *);
 #define vtfs_FEATURES	0
@@ -81,14 +80,12 @@ static driver_t vtfs_driver = {
 };
 static devclass_t vtfs_devclass;
 
-VIRTIO_DRIVER_MODULE(virtio_fs, vtfs_driver, vtfs_devclass,
-    vtfs_modevent, 0);
+VIRTIO_DRIVER_MODULE(virtio_fs, vtfs_driver, vtfs_devclass, vtfs_modevent, 0);
 MODULE_VERSION(virtio_fs, 1);
 MODULE_DEPEND(virtio_fs, virtio, 1, 1, 1);
 // MODULE_DEPEND(virtio_fs, random_device, 1, 1, 1);
 
-VIRTIO_SIMPLE_PNPINFO(virtio_fs, VIRTIO_ID_FS,
-    "VirtIO Filesystem Adapter");
+VIRTIO_SIMPLE_PNPINFO(virtio_fs, VIRTIO_ID_FS, "VirtIO Filesystem Adapter");
 
 static int
 vtfs_modevent(module_t mod, int type, void *unused)
@@ -163,7 +160,7 @@ vtfs_detach(device_t dev)
 	return (1);
 }
 
-static int
+static void
 vtfs_negotiate_features(struct vtfs_softc *sc)
 {
 	device_t dev;
@@ -173,19 +170,6 @@ vtfs_negotiate_features(struct vtfs_softc *sc)
 	features = vtfs_FEATURES;
 
 	sc->vtfs_features = virtio_negotiate_features(dev, features);
-	return (virtio_finalize_features(dev));
-}
-
-static int
-vtfs_setup_features(struct vtfs_softc *sc)
-{
-	int error;
-
-	error = vtfs_negotiate_features(sc);
-	if (error)
-		return (error);
-
-	return (0);
 }
 
 static int
