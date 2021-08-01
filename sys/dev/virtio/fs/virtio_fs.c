@@ -41,6 +41,7 @@ __FBSDID("$FreeBSD$");
 
 #include <dev/virtio/virtio.h>
 #include <dev/virtio/virtqueue.h>
+#include <dev/virtio/fs/virtio_fs.h>
 
 struct vtfs_softc {
 	device_t		 vtfs_dev;
@@ -55,18 +56,19 @@ static int	vtfs_probe(device_t);
 static int	vtfs_attach(device_t);
 static int	vtfs_detach(device_t);
 
-static int	vtfs_negotiate_features(struct vtfs_softc *);
+static void     vtfs_negotiate_features(struct vtfs_softc *);
 static int	vtfs_alloc_hiprio_virtqueue(struct vtfs_softc *);
 static int	vtfs_alloc_req_virtqueue(struct vtfs_softc *);
-#define vtfs_FEATURES	0
+
+#define VTFS_FEATURES 0
 
 static struct virtio_feature_desc vtfs_feature_desc[] = {
-	{ 0, NULL }
+  { 0, NULL }
 };
 
 static device_method_t vtfs_methods[] = {
 	/* Device methods. */
-	DEVMETHOD(device_probe,		vtfs_probe),
+	DEVMETHOD(device_probe,         vtfs_probe),
 	DEVMETHOD(device_attach,	vtfs_attach),
 	DEVMETHOD(device_detach,	vtfs_detach),
 
@@ -80,58 +82,62 @@ static driver_t vtfs_driver = {
 };
 static devclass_t vtfs_devclass;
 
-VIRTIO_DRIVER_MODULE(virtio_fs, vtfs_driver, vtfs_devclass, vtfs_modevent, 0);
+DRIVER_MODULE(virtio_fs, virtio_pci, vtfs_driver, vtfs_devclass, vtfs_modevent, 0);
 MODULE_VERSION(virtio_fs, 1);
 MODULE_DEPEND(virtio_fs, virtio, 1, 1, 1);
-// MODULE_DEPEND(virtio_fs, random_device, 1, 1, 1);
-
-VIRTIO_SIMPLE_PNPINFO(virtio_fs, VIRTIO_ID_FS, "VirtIO Filesystem Adapter");
 
 static int
 vtfs_modevent(module_t mod, int type, void *unused)
 {
-	int error;
+  int error;
 
-	switch (type) {
-	case MOD_LOAD:
-	case MOD_QUIESCE:
-	case MOD_UNLOAD:
-	case MOD_SHUTDOWN:
-		error = 0;
-		break;
-	default:
-		error = EOPNOTSUPP;
-		break;
-	}
+  error = 0;
 
-	return (error);
+  switch (type) {
+  case MOD_LOAD:
+  case MOD_QUIESCE:
+  case MOD_UNLOAD:
+  case MOD_SHUTDOWN:
+    break;
+  default:
+    error = EOPNOTSUPP;
+    break;
+  }
+
+  return (error);
 }
+
 
 static int
 vtfs_probe(device_t dev)
 {
-	return (VIRTIO_SIMPLE_PROBE(dev, virtio_fs));
+
+  if (virtio_get_device_type(dev) != VIRTIO_ID_FS)
+    return (ENXIO);
+
+  device_set_desc(dev, "VirtIO Filesystem");
+  printf("VirtIO Filesystem");
+  return (BUS_PROBE_DEFAULT);
 }
 
 static int
 vtfs_attach(device_t dev)
 {
-	struct vtfs_softc *sc, *exp;
+	struct vtfs_softc *sc;
 	int error;
+
+	printf("Attaching virtio-fs device");
 
 	sc = device_get_softc(dev);
 	sc->vtfs_dev = dev;
+
 	virtio_set_feature_desc(dev, vtfs_feature_desc);
+	vtfs_negotiate_features(sc);
 
-	error = vtfs_setup_features(sc);
-	if (error) {
-		device_printf(dev, "cannot setup features\n");
-		goto fail;
-	}
-
+	virtio_setup_intr(dev, INTR_TYPE_BIO);
 	error = vtfs_alloc_hiprio_virtqueue(sc);
 	if (error) {
-		device_printf(dev, "cannot allocate high priority virtqueue\n");
+	        device_printf(dev, "cannot allocate high priority virtqueue\n");
 		goto fail;
 	}
 
@@ -160,16 +166,17 @@ vtfs_detach(device_t dev)
 	return (1);
 }
 
+
 static void
 vtfs_negotiate_features(struct vtfs_softc *sc)
 {
-	device_t dev;
-	uint64_t features;
+  device_t dev;
+  uint64_t features;
 
-	dev = sc->vtfs_dev;
-	features = vtfs_FEATURES;
+  dev = sc->vtfs_dev;
+  features = VTFS_FEATURES;
 
-	sc->vtfs_features = virtio_negotiate_features(dev, features);
+  sc->vtfs_features = virtio_negotiate_features(dev, features);
 }
 
 static int
