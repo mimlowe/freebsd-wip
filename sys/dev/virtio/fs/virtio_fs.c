@@ -117,12 +117,12 @@ static int
 vtfs_probe(device_t dev)
 {
 
-  printf("probing virtio_fs driver");
+
   if (virtio_get_device_type(dev) != VIRTIO_ID_FS)
     return (ENXIO);
 
   device_set_desc(dev, "VirtIO Filesystem");
-  printf("VirtIO Filesystem");
+ 
   return (BUS_PROBE_DEFAULT);
 }
 
@@ -132,8 +132,6 @@ vtfs_attach(device_t dev)
 	struct vtfs_softc *sc;
 	int error;
 
-	printf("Attaching virtio-fs device");
-
 	sc = device_get_softc(dev);
 	sc->vtfs_dev = dev;
 
@@ -141,6 +139,7 @@ vtfs_attach(device_t dev)
 	vtfs_negotiate_features(sc);
 
 	virtio_setup_intr(dev, INTR_TYPE_BIO);
+
 	error = vtfs_alloc_hiprio_virtqueue(sc);
 	if (error) {
 	        device_printf(dev, "cannot allocate high priority virtqueue\n");
