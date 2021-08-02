@@ -95,8 +95,13 @@ vtfs_modevent(module_t mod, int type, void *unused)
 
   switch (type) {
   case MOD_LOAD:
+    printf("Virtio Filesystem Driver Module Loaded\n");
+    break;
   case MOD_QUIESCE:
+    break;
   case MOD_UNLOAD:
+    printf("Virtio Filesystem Drive Module Unloaded\n");
+    break;
   case MOD_SHUTDOWN:
     break;
   default:
@@ -112,6 +117,7 @@ static int
 vtfs_probe(device_t dev)
 {
 
+  printf("probing virtio_fs driver");
   if (virtio_get_device_type(dev) != VIRTIO_ID_FS)
     return (ENXIO);
 
